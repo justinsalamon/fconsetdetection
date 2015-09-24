@@ -4,6 +4,27 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+def plot_pr_curve(recalls, precisions):
+    '''
+    Given array of recall values and array of precision values, plot PR curve
+    :param recalls:
+    :param precisions:
+    :return:
+    '''
+    assert len(recalls)==len(precisions)
+
+    # Create graph
+    plt.clf()
+    plt.plot(recalls, precisions, '-o', label='Precision-Recall curve')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Precision-Recall Curve: 200ms Tolerance')
+    plt.legend(loc="lower left")
+    plt.show()
+
+
 def eval_detection_func(annotation_path, function_path, start_time, dt,
                         limit=3000):
     """
@@ -40,7 +61,7 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     recalls = []
     max_F = 0
 
-    for threshold in np.linspace(0, 1):
+    for threshold in np.linspace(0, 1, 100):
         est_onsets_ind = pick_peaks(detection_function, threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
@@ -53,16 +74,7 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
 
     print max_F
 
-    # Create graph
-    plt.clf()
-    plt.plot(recalls, precisions, label='Precision-Recall curve')
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.ylim([0.0, 1.05])
-    plt.xlim([0.0, 1.0])
-    plt.title('Precision-Recall Curve: 200ms Tolerance')
-    plt.legend(loc="lower left")
-    plt.show()
+    plot_pr_curve(recalls, precisions)
 
 
 def pick_peaks(detection_function, threshold):
