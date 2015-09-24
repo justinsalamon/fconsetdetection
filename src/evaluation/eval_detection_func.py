@@ -23,11 +23,16 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
 
     # Detection function output to test
     detection_function = np.load(function_path)[:, 0]
+    est_times = indices_to_times(np.arange(len(detection_function)),
+                                 start_time, dt)
+    limit_ind = np.where(est_times < limit)[0][-1]
+    est_times = est_times[:limit_ind+1]
+    detection_function = detection_function[:limit_ind+1]
 
     # Get reference onsets for ground truth
     df = pd.read_csv(annotation_path, header=None,
                      names=['onsets', 'offsets', 'label'], delimiter='\t')
-    ref_onsets = np.asarray(df['onsets'])
+    ref_onsets = np.asarray(df['onsets'][df['onsets'] < limit])
 
     # Get list of precisions and recalls for varying thresholds
     out = []
