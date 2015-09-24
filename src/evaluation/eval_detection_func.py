@@ -87,8 +87,8 @@ def indices_to_times(indices, start_time, dt):
     return start_time + indices * dt
 
 
-path_ref = "../annotations/NSDNS_20110902_192900_high_and_low.txt"
-path_est = "../detection_functions/NSDNS_20110902_192900_streaming_prob.npy"
+path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+path_est = "../../detection_functions/NSDNS_20110902_192900_streaming_prob.npy"
 dt = 0.05079365079
 start_time = 0.07619047619
 eval_detection_func(path_ref, path_est, start_time, dt)
