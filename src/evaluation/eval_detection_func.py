@@ -86,15 +86,12 @@ def pick_peaks(detection_function, threshold):
     :param threshold: float
     :return: numpy array of ints
     """
-    # i_end = times_to_indices(t_end, start_time, dt)
-    # detection_function = detection_function[:i_end]
-    # mask = np.ma.greater[detection_function>threshold]
 
     smaller = detection_function[0:-2] <= detection_function[1:-1]
     larger = detection_function[1:-1] > detection_function[2:]
     over_threshold = detection_function[1:-1] >= threshold
     peaks = smaller*larger*over_threshold
-    locs = np.where(peaks==True)[0] + 1
+    locs = np.where(peaks == True)[0] + 1
     return locs
 
 
