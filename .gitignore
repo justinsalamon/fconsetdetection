@@ -8,3 +8,5 @@
 .idea/scopes/scope_settings.xml
 annotations/
 detection_functions/
+spectrograms/
+audio/
