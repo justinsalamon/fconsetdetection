@@ -3,7 +3,6 @@ import mir_eval
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 def plot_pr_curve(recalls, precisions):
     '''
     Given array of recall values and array of precision values, plot PR curve
@@ -64,7 +63,8 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     mir_eval.onset.MAX_TIME = time_limit
 
     for threshold in np.linspace(0, 1, 100):
-        est_onsets_ind = pick_peaks(detection_function, threshold)
+        est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold)
+        # est_onsets_ind = pick_peaks(detection_function, threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
                                            est_onsets,
@@ -86,23 +86,60 @@ def pick_peaks(detection_function, threshold):
     :param threshold: float
     :return: numpy array of ints
     """
-    # i_end = times_to_indices(t_end, start_time, dt)
-    # detection_function = detection_function[:i_end]
-    # mask = np.ma.greater[detection_function>threshold]
 
     smaller = detection_function[0:-2] <= detection_function[1:-1]
     larger = detection_function[1:-1] > detection_function[2:]
     over_threshold = detection_function[1:-1] >= threshold
     peaks = smaller*larger*over_threshold
-    locs = np.where(peaks==True)[0] + 1
+    locs = np.where(peaks == True)[0] + 1
+    return locs
+
+
+def pick_peaks_with_smoothing(detection_function, threshold):
+    """
+    Same as pick_peaks, but incorporates a simple low pass filter
+    :param detection_function: numpy array
+    :param threshold: float
+    :return: numpy array of ints
+    """
+    # Normalize
+    detection_function -= np.mean(detection_function)
+    detection_function /= np.max(np.abs(detection_function))
+
+    # Smooth with 3-length mean filter
+    detection_function = (detection_function[0:-2] + detection_function[1:-1] +
+                          detection_function[2:])/3
+
+    smaller = detection_function[0:-2] <= detection_function[1:-1]
+    larger = detection_function[1:-1] > detection_function[2:]
+    over_threshold = detection_function[1:-1] >= threshold
+
+    peaks = smaller*larger*over_threshold
+    locs = np.where(peaks == True)[0] + 2
     return locs
 
 
 def times_to_indices(times, start_time, dt):
+    """
+    Converts a time or series of times to their corresponding indices in the
+    detection function
+    :param times: float or collection of floats
+    :param start_time: float
+    :param dt: float
+    :return: int or numpy array of int
+    """
     return int(np.round((times - start_time)/dt))
 
 
 def indices_to_times(indices, start_time, dt):
+    """
+    Converts a series of detection function indices to their corresponding
+    times
+    :param indices: int or collection of ints
+    :param start_time: float
+    :param dt: float
+    :return: float or numpy array of floats
+    """
     return start_time + indices * dt
 
 
