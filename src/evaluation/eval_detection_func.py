@@ -11,7 +11,7 @@ def plot_pr_curve(recalls, precisions):
     :param precisions:
     :return:
     '''
-    assert len(recalls)==len(precisions)
+    assert len(recalls) == len(precisions)
 
     # Create graph
     plt.clf()
@@ -44,16 +44,18 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
 
     # Detection function output to test
     detection_function = np.load(function_path)[:, 0]
-    est_times = indices_to_times(np.arange(len(detection_function)),
-                                 start_time, dt)
-    limit_ind = np.where(est_times < time_limit)[0][-1]
-    est_times = est_times[:limit_ind+1]
-    detection_function = detection_function[:limit_ind+1]
+    # est_times = indices_to_times(np.arange(len(detection_function)),
+    #                              start_time, dt)
+    # limit_ind = np.where(est_times < time_limit)[0][-1]
+    # est_times = est_times[:limit_ind+1]
+    # detection_function = detection_function[:limit_ind+1]
 
     # Get reference onsets for ground truth
     df = pd.read_csv(annotation_path, header=None,
                      names=['onsets', 'offsets', 'label'], delimiter='\t')
-    ref_onsets = np.asarray(df['onsets'][df['onsets'] < time_limit])
+    ref_onsets = np.asarray(df['onsets'])
+    ref_onsets = ref_onsets[ref_onsets >= start_time]
+    ref_onsets = ref_onsets[ref_onsets < t_end]
 
     # Get list of precisions and recalls for varying thresholds
     out = []
@@ -61,10 +63,14 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     recalls = []
     max_F = 0
 
-    mir_eval.onset.MAX_TIME = time_limit
+    mir_eval.onset.MAX_TIME = t_end
+
+    # smooth detection function
+    win_size = 2        # length of mean filter - 2 or 3 seems to work best
+    detection_function = mean_filter(detection_function, win_size)
 
     for threshold in np.linspace(0, 1, 100):
-        est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold)
+        est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
         # est_onsets_ind = pick_peaks(detection_function, threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
@@ -96,27 +102,35 @@ def pick_peaks(detection_function, threshold):
     return locs
 
 
-def pick_peaks_with_smoothing(detection_function, threshold):
-    """
-    Same as pick_peaks, but incorporates a simple low pass filter
-    :param detection_function: numpy array
-    :param threshold: float
-    :return: numpy array of ints
-    """
+def mean_filter(detection_function, win_size):
     # Normalize
     detection_function -= np.mean(detection_function)
     detection_function /= np.max(np.abs(detection_function))
 
-    # Smooth with 3-length mean filter
-    detection_function = (detection_function[0:-2] + detection_function[1:-1] +
-                          detection_function[2:])/3
+    # Smooth with variable length mean filter
+    smoothed_function = np.zeros(detection_function.size-win_size+1)
+    for i in xrange(win_size-1):
+        smoothed_function += detection_function[i: -1*win_size+i+1]
+    smoothed_function += detection_function[win_size-1:]
+    return smoothed_function/win_size
+
+
+def pick_peaks_with_smoothing(detection_function, threshold, win_size):
+    """
+    Same as pick_peaks, but incorporates a simple low pass filter
+    :param detection_function: numpy array
+    :param threshold: float
+    :param win_size: int
+        the offset due to frames dropped while filtering
+    :return: numpy array of ints
+    """
 
     smaller = detection_function[0:-2] <= detection_function[1:-1]
     larger = detection_function[1:-1] > detection_function[2:]
     over_threshold = detection_function[1:-1] >= threshold
 
     peaks = smaller*larger*over_threshold
-    locs = np.where(peaks == True)[0] + 2
+    locs = np.where(peaks == True)[0] + win_size - 1
     return locs
 
 
@@ -144,8 +158,13 @@ def indices_to_times(indices, start_time, dt):
     return start_time + indices * dt
 
 
-path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
-path_est = "../../detection_functions/NSDNS_20110902_192900_streaming_prob.npy"
-dt = 0.05079365079
-start_time = 0.07619047619
-eval_detection_func(path_ref, path_est, start_time, dt, time_limit=np.Inf)
+# path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+# path_est = "../../detection_functions/NSDNS_20110902_192900_streaming_prob.npy"
+# dt = 0.05079365079
+# start_time = 0.07619047619
+
+path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
+path_est = "../../detection_functions/ALFRED_20110924_183200_500-600_SF.npy"
+start_time = 500
+dt = 0.00533333333333
+eval_detection_func(path_ref, path_est, start_time, dt, time_limit=100)
