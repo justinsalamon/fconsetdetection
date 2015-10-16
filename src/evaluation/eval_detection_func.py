@@ -43,12 +43,21 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     t_end = start_time + time_limit    # seconds
 
     # Detection function output to test
-    detection_function = np.load(function_path)[:, 0]
+    detection_function = np.load(function_path)
+
+    # Downmix
+    print np.shape(detection_function)
+    if len(np.shape(detection_function)) > 1:
+        detection_function = detection_function[:, 0]
+
     # est_times = indices_to_times(np.arange(len(detection_function)),
     #                              start_time, dt)
     # limit_ind = np.where(est_times < time_limit)[0][-1]
     # est_times = est_times[:limit_ind+1]
     # detection_function = detection_function[:limit_ind+1]
+
+    # If detection function times start at 0 instead of start_time, add offset
+    detection_function += start_time
 
     # Get reference onsets for ground truth
     df = pd.read_csv(annotation_path, header=None,
@@ -163,8 +172,14 @@ def indices_to_times(indices, start_time, dt):
 # dt = 0.05079365079
 # start_time = 0.07619047619
 
+# path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
+# path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_SF.npy"
+# start_time = 0
+# dt = 0.00533333333333
+
 path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/ALFRED_20110924_183200_500-600_SF.npy"
+path_est = "../../detection_functions/test.npy"
 start_time = 500
-dt = 0.00533333333333
+dt = 0.005
+
 eval_detection_func(path_ref, path_est, start_time, dt, time_limit=100)

@@ -16,8 +16,8 @@ def half_rectify(n):
     return np.fmax(n, np.zeros_like(n))
 
 if __name__ == "__main__":
-    filename = "../../audio/ALFRED_20110924_183200_500-600.wav"
-    outfile = "../../detection_functions/ALFRED_20110924_183200_500-600_SF.npy"
+    filename = "../../audio/ALFRED_20110924_183200.wav"
+    outfile = "../../detection_functions/ALFRED_20110924_183200_SF.npy"
 
     # Load audio and compute spectrogram
     y, sr = librosa.core.load(filename, sr=None)
@@ -25,7 +25,6 @@ if __name__ == "__main__":
     hop_length = 128.0
     dt = hop_length/sr
     D = librosa.core.stft(y, n_fft=n_fft, hop_length=hop_length)
-    print D.shape
 
     streaming_prob = spectral_flux(D)
     streaming_prob /= np.max(streaming_prob)
@@ -34,5 +33,4 @@ if __name__ == "__main__":
 
     np.save(outfile, out)
     print dt
-    print out.shape
 

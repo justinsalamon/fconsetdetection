@@ -20,4 +20,4 @@ def trim_audio(filename, start_time, end_time):
 
     return out_filename
 
-trim_audio("../../audio/ALFRED_20110924_183200.wav", 500, 600)
+trim_audio("../../audio/ALFRED_20110924_183200.wav", 0, 3600)
