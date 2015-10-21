@@ -897,20 +897,20 @@ def main(args):
             else:
                 act = sodf.superflux()
             print type(act)
-            np.save('test.npy', act)
+            np.save(f + '_superflux.npy', act)
             # create an Onset object with the activations
-            o = Onset(act, args.fps, args.online)
-            if args.save:
-                # save the raw ODF activations
-                o.save("%s%s" % (filename, args.act_suffix), args.sep)
-        # detect the onsets
-        o.detect(args.threshold, args.combine, args.pre_avg, args.pre_max,
-                 args.post_avg, args.post_max, args.delay)
-        # write the onsets to a file
-        o.write("%s%s" % (filename, args.det_suffix))
-        # also output them to stdout if verbose
-        if args.verbose:
-            print 'detections:', o.detections
+        #     o = Onset(act, args.fps, args.online)
+        #     if args.save:
+        #         # save the raw ODF activations
+        #         o.save("%s%s" % (filename, args.act_suffix), args.sep)
+        # # detect the onsets
+        # o.detect(args.threshold, args.combine, args.pre_avg, args.pre_max,
+        #          args.post_avg, args.post_max, args.delay)
+        # # write the onsets to a file
+        # o.write("%s%s" % (filename, args.det_suffix))
+        # # also output them to stdout if verbose
+        # if args.verbose:
+        #     print 'detections:', o.detections
         # continue with next file
 
 if __name__ == '__main__':

@@ -3,6 +3,8 @@ import mir_eval
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import scipy.signal as sg
+
 
 def plot_pr_curve(recalls, precisions):
     '''
@@ -57,7 +59,9 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     # detection_function = detection_function[:limit_ind+1]
 
     # If detection function times start at 0 instead of start_time, add offset
-    detection_function += start_time
+    # This is totally not foolproof, but will work most of the time
+    if detection_function[0] < start_time:
+        detection_function += start_time
 
     # Get reference onsets for ground truth
     df = pd.read_csv(annotation_path, header=None,
@@ -71,26 +75,41 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     precisions = []
     recalls = []
     max_F = 0
+    max_F2 = 0
 
     mir_eval.onset.MAX_TIME = t_end
 
-    # smooth detection function
-    win_size = 2        # length of mean filter - 2 or 3 seems to work best
-    detection_function = mean_filter(detection_function, win_size)
+    # Pre-process detection function
+
+    # Normalize
+    detection_function -= np.mean(detection_function)
+    detection_function /= np.max(np.abs(detection_function))
+
+    # Smooth
+    win_size = 3
+    b, a = sg.butter(1, 6*dt)   # multiplying by dt = dividing by fs
+    detection_function_smoothed = sg.filtfilt(b, a, detection_function)
+    detection_function_med = sg.medfilt(detection_function_smoothed, win_size)
+
+    eps = 0.000000001
 
     for threshold in np.linspace(0, 1, 100):
-        est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
-        # est_onsets_ind = pick_peaks(detection_function, threshold)
+        # est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
+        a_threshold = threshold + detection_function_med
+        est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
                                            est_onsets,
                                            window=0.2)
+        F2 = 5*P*R/(4*P+R+eps)
         out.append((threshold, (F, P, R)))
         precisions.append(P)
         recalls.append(R)
         max_F = max(max_F, F)
+        max_F2 = max(max_F2, F2)
 
     print max_F
+    print max_F2
 
     plot_pr_curve(recalls, precisions)
 
@@ -107,6 +126,22 @@ def pick_peaks(detection_function, threshold):
     larger = detection_function[1:-1] > detection_function[2:]
     over_threshold = detection_function[1:-1] >= threshold
     peaks = smaller*larger*over_threshold
+    locs = np.where(peaks == True)[0] + 1
+    return locs
+
+def pick_peaks_at(detection_function, a_threshold):
+    """
+    Given the output of a detection function and an adaptive threshold, finds
+     the indices of the peaks
+    :param detection_function: 1xN vector
+    :param threshold: 1xN vector
+    :return: numpy array of ints
+    """
+    detection_function = np.maximum(detection_function-a_threshold, np.zeros_like(detection_function))
+
+    smaller = detection_function[0:-2] <= detection_function[1:-1]
+    larger = detection_function[1:-1] > detection_function[2:]
+    peaks = smaller*larger
     locs = np.where(peaks == True)[0] + 1
     return locs
 
@@ -139,7 +174,8 @@ def pick_peaks_with_smoothing(detection_function, threshold, win_size):
     over_threshold = detection_function[1:-1] >= threshold
 
     peaks = smaller*larger*over_threshold
-    locs = np.where(peaks == True)[0] + win_size - 1
+    # locs = np.where(peaks == True)[0] + win_size - 1
+    locs = np.where(peaks == True)[0] + 1
     return locs
 
 
@@ -178,8 +214,8 @@ def indices_to_times(indices, start_time, dt):
 # dt = 0.00533333333333
 
 path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/test.npy"
-start_time = 500
+path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_superflux.npy"
+start_time = 0
 dt = 0.005
 
-eval_detection_func(path_ref, path_est, start_time, dt, time_limit=100)
+eval_detection_func(path_ref, path_est, start_time, dt, time_limit=3600)
