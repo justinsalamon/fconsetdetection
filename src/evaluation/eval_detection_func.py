@@ -28,7 +28,7 @@ def plot_pr_curve(recalls, precisions):
 
 
 def eval_detection_func(annotation_path, function_path, start_time, dt,
-                        time_limit=3000):
+                        duration=3000):
     """
     Evaluates a detection function. Given the output of a detection function we
     find the peaks, and compare them to a list of ground-truth annotations.
@@ -42,7 +42,7 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     """
 
     # Set testing params
-    t_end = start_time + time_limit    # seconds
+    t_end = start_time + duration    # seconds
 
     # Detection function output to test
     detection_function = np.load(function_path)
@@ -218,4 +218,4 @@ path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_superflux.np
 start_time = 0
 dt = 0.005
 
-eval_detection_func(path_ref, path_est, start_time, dt, time_limit=3600)
+eval_detection_func(path_ref, path_est, start_time, dt, duration=3600)
