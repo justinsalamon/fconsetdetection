@@ -99,9 +99,9 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
 
     for threshold in np.linspace(0, 1, 100):
         # est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
-        # a_threshold = threshold + detection_function_med
-        # est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
-        est_onsets_ind = pick_peaks(detection_function, threshold)
+        a_threshold = threshold + detection_function_med
+        est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
+        # est_onsets_ind = pick_peaks(detection_function, threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
                                            est_onsets,
@@ -142,11 +142,11 @@ def pick_peaks_at(detection_function, a_threshold):
     :param threshold: 1xN vector
     :return: numpy array of ints
     """
-    detection_function = np.maximum(detection_function-a_threshold, np.zeros_like(detection_function))
 
     smaller = detection_function[0:-2] <= detection_function[1:-1]
     larger = detection_function[1:-1] > detection_function[2:]
-    peaks = smaller*larger
+    above_thresh = detection_function > a_threshold
+    peaks = smaller*larger*above_thresh[1:-1]
     locs = np.where(peaks == True)[0] + 1
     return locs
 
@@ -219,7 +219,7 @@ def indices_to_times(indices, start_time, dt):
 # dt = 0.00533333333333
 
 path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN.npy"
+path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN_8.npy"
 start_time = 0
 dt = 0.05
 

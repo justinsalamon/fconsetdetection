@@ -14,8 +14,10 @@ def compute_features(y, sr):
         sampling rate
     :return: feature vector
     """
-    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=20, n_fft=1024, hop_length=512,
-                                    n_mels=40, fmin=1500)
+    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=50, n_fft=2048, hop_length=220,
+                                    n_mels=40, fmin=2000)
+
+    mfccs = mfccs[1:,:]
 
     # Summarize features
     # print np.shape(mfccs)
@@ -31,7 +33,7 @@ def compute_features(y, sr):
     # print np.shape(d_d_mfccs)
     #
     # print np.shape(features)
-    return np.reshape(features, (1,len(features)))
+    return np.reshape(features, (1, len(features)))
 
 
 def train_KNN(clf, sample_dir):
@@ -109,9 +111,12 @@ def predict_KNN(clf, y, sr, win_size=0.15, hop_size=0.05):
     while i+win_samples < len(y):
         segment = y[i:i+hop_samples]
         features = compute_features(segment, sr)
-        label = clf.predict(features)
+        label = clf.predict_proba(features)[0][1]
+        # print label
         novelty_curve = np.append(novelty_curve, label)
         i += hop_samples
+
+    # print (novelty_curve[0:50])
 
     return novelty_curve, hop_size
 
@@ -122,7 +127,7 @@ def half_rectify(n):
 if __name__ == "__main__":
     sample_dir = "../../audio/samples/ALFRED/"
     infile = "../../audio/ALFRED_20110924_183200_0-3600.wav"
-    outfile = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN.npy"
+    outfile = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN_8.npy"
 
     # Train classifier
     print "Training classifier..."
