@@ -47,10 +47,14 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     # Detection function output to test
     detection_function = np.load(function_path)
 
+
     # Downmix
     print np.shape(detection_function)
     if len(np.shape(detection_function)) > 1:
         detection_function = detection_function[:, 0]
+
+    # plt.plot(detection_function)
+
 
     # est_times = indices_to_times(np.arange(len(detection_function)),
     #                              start_time, dt)
@@ -95,8 +99,9 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
 
     for threshold in np.linspace(0, 1, 100):
         # est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
-        a_threshold = threshold + detection_function_med
-        est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
+        # a_threshold = threshold + detection_function_med
+        # est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
+        est_onsets_ind = pick_peaks(detection_function, threshold)
         est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
         F, P, R = mir_eval.onset.f_measure(ref_onsets,
                                            est_onsets,
@@ -214,8 +219,8 @@ def indices_to_times(indices, start_time, dt):
 # dt = 0.00533333333333
 
 path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_superflux.npy"
+path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN.npy"
 start_time = 0
-dt = 0.005
+dt = 0.05
 
 eval_detection_func(path_ref, path_est, start_time, dt, duration=3600)
