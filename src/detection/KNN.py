@@ -2,6 +2,7 @@ import numpy as np
 import librosa
 import os
 import sklearn.neighbors as nbrs
+from sklearn.svm import SVC
 import scipy.signal as sg
 
 
@@ -36,7 +37,7 @@ def compute_features(y, sr):
     return np.reshape(features, (1, len(features)))
 
 
-def train_KNN(clf, sample_dir):
+def train_clf(clf, sample_dir):
     """
     Trains a classifier on all contents of a given directory. Labels are given
         in the name of the file
@@ -85,7 +86,7 @@ def train_KNN(clf, sample_dir):
     return clf
 
 
-def predict_KNN(clf, y, sr, win_size=0.15, hop_size=0.05):
+def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05):
     """
     "Onset detection function." Outputs a running classification of 150ms
     windows.
@@ -127,18 +128,26 @@ def half_rectify(n):
 if __name__ == "__main__":
     sample_dir = "../../audio/samples/ALFRED/"
     infile = "../../audio/ALFRED_20110924_183200_0-3600.wav"
-    outfile = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN_8.npy"
+    outfile = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
+
+    clf_type = 'SVM'
 
     # Train classifier
-    print "Training classifier..."
-    clf = nbrs.KNeighborsClassifier(n_neighbors=5)
-    clf = train_KNN(clf, sample_dir)
+    print "Training {} classifier...".format(clf_type)
+    if clf_type == 'KNN':
+        clf = nbrs.KNeighborsClassifier(n_neighbors=5)
+    elif clf_type == 'SVM':
+        clf = SVC(probability=True)
+    else:
+        print "Error: unknown classifier type"
+        exit()
+    clf = train_clf(clf, sample_dir)
 
     # Run classifier on 150ms windows of data
     print "Loading audio..."
     y, sr = librosa.load(infile, sr=None)
     print "Predicting novelty curve..."
-    onsets, dt = predict_KNN(clf, y, sr)
+    onsets, dt = predict_clf(clf, y, sr)
 
     # Smooth so taking median later doesn't kill everything
     streaming_prob = sg.convolve(onsets, [0.1, 0.8, 0.1])

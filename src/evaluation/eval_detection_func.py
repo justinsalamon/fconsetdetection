@@ -219,7 +219,7 @@ def indices_to_times(indices, start_time, dt):
 # dt = 0.00533333333333
 
 path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_KNN_8.npy"
+path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
 start_time = 0
 dt = 0.05
 
