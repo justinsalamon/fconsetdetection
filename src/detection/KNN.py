@@ -15,8 +15,8 @@ def compute_features(y, sr):
         sampling rate
     :return: feature vector
     """
-    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=50, n_fft=2048, hop_length=220,
-                                    n_mels=40, fmin=2000)
+    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=20, n_fft=2048, hop_length=220,
+                                 n_mels=40, fmin=2000)
 
     mfccs = mfccs[1:,:]
 
@@ -32,12 +32,11 @@ def compute_features(y, sr):
     features = np.append(features, np.std(d_d_mfccs, axis=1))
 
     # print np.shape(d_d_mfccs)
-    #
     # print np.shape(features)
     return np.reshape(features, (1, len(features)))
 
 
-def train_clf(clf, sample_dir):
+def train_clf(clf, sample_dirs):
     """
     Trains a classifier on all contents of a given directory. Labels are given
         in the name of the file
@@ -51,31 +50,32 @@ def train_clf(clf, sample_dir):
     labels = None
 
     # fill data and labels
-    for f in os.listdir(sample_dir):
-        if f[-4:] != '.wav':
-            continue
-        y, sr = librosa.load(sample_dir + f, sr=None)
-        features = compute_features(y, sr)
+    for sample_dir in sample_dirs:
+        for f in os.listdir(sample_dir):
+            if f[-4:] != '.wav':
+                continue
+            y, sr = librosa.load(sample_dir + f, sr=None)
+            features = compute_features(y, sr)
 
-        # THERE EXISTS A BETTER WAY OF HANDLING THIS WHOLE THING
-        if data is None:
-            data = features
-        else:
-            data = np.concatenate((data, features), axis=0)
+            # THERE EXISTS A BETTER WAY OF HANDLING THIS WHOLE THING
+            if data is None:
+                data = features
+            else:
+                data = np.concatenate((data, features), axis=0)
 
-        if f[0] == 't':
-            if labels is None:
-                labels = np.asarray([1])
+            if f[0] == 't':
+                if labels is None:
+                    labels = np.asarray([1])
+                else:
+                    labels = np.concatenate((labels, [1]))
+            elif f[0] == 'f':
+                if labels is None:
+                    labels = np.asarray([0])
+                else:
+                    labels = np.concatenate((labels, [0]))
             else:
-                labels = np.concatenate((labels, [1]))
-        elif f[0] == 'f':
-            if labels is None:
-                labels = np.asarray([0])
-            else:
-                labels = np.concatenate((labels, [0]))
-        else:
-            print "BAD FILENAMES!"
-            exit()
+                print "BAD FILENAMES!"
+                exit()
 
     # print labels
     # print np.shape(data)
@@ -86,19 +86,21 @@ def train_clf(clf, sample_dir):
     return clf
 
 
-def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05):
+def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05, append_to=None, t_start=0):
     """
     "Onset detection function." Outputs a running classification of 150ms
     windows.
     :param clf: sklearn classifier
     :param y: 1xN array
         full audio data
-    :param dt: float
-        time between frames in seconds
+    :param sr: float
+        sampling rate of audio
     :param win_size: float
         window size in seconds
     :param hop_size: float
         hop size in seconds
+    :param append_to: String
+        filepath to an existing incomplete detection function
     :return: (1xL, float)
         novelty curve, time between samples on novelty curve in seconds
     """
@@ -106,14 +108,17 @@ def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05):
     win_samples = np.floor(win_size*sr)   # number of samples in window
     hop_samples = np.floor(hop_size*sr)   # number of samples in hop
 
-    novelty_curve = np.asarray([])
+    if append_to is None:
+        novelty_curve = np.asarray([])
+    else:
+        novelty_curve = np.load(append_to)
 
     i = 0
+    i_offset = t_start * sr
     while i+win_samples < len(y):
         segment = y[i:i+hop_samples]
         features = compute_features(segment, sr)
         label = clf.predict_proba(features)[0][1]
-        # print label
         novelty_curve = np.append(novelty_curve, label)
         i += hop_samples
 
@@ -126,11 +131,11 @@ def half_rectify(n):
     return np.fmax(n, np.zeros_like(n))
 
 if __name__ == "__main__":
-    sample_dir = "../../audio/samples/ALFRED/"
-    infile = "../../audio/ALFRED_20110924_183200_0-3600.wav"
-    outfile = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
+    sample_dirs = ["../../audio/samples/ALFRED/", "../../audio/samples/DANBY/"]
+    infile = "../../audio/SBI-1_20090915_234016.wav"
+    outfile = "../../detection_functions/SBI-1_20090915_234016_KNN_9.npy"
 
-    clf_type = 'SVM'
+    clf_type = 'KNN'
 
     # Train classifier
     print "Training {} classifier...".format(clf_type)
@@ -141,7 +146,7 @@ if __name__ == "__main__":
     else:
         print "Error: unknown classifier type"
         exit()
-    clf = train_clf(clf, sample_dir)
+    clf = train_clf(clf, sample_dirs)
 
     # Run classifier on 150ms windows of data
     print "Loading audio..."
@@ -151,6 +156,7 @@ if __name__ == "__main__":
 
     # Smooth so taking median later doesn't kill everything
     streaming_prob = sg.convolve(onsets, [0.1, 0.8, 0.1])
+    # Conform data to CLO format
     inv_streaming_prob = np.ones_like(streaming_prob)-streaming_prob
     out = np.column_stack((streaming_prob, inv_streaming_prob))
 

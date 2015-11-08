@@ -41,12 +41,14 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     :return: ???
     """
 
-    # Set testing params
-    t_end = start_time + duration    # seconds
-
     # Detection function output to test
     detection_function = np.load(function_path)
 
+    # Set testing params
+    if duration is None:
+        t_end = len(detection_function) * dt
+    else:
+        t_end = start_time + duration    # seconds
 
     # Downmix
     print np.shape(detection_function)
@@ -218,9 +220,12 @@ def indices_to_times(indices, start_time, dt):
 # start_time = 0
 # dt = 0.00533333333333
 
-path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
-path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
+# path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
+# path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
+
+path_ref = "../../annotations/SBI-1_20090915_HAND_LOW_IDaek_EDITED_with_HIGH.txt"
+path_est = "../../detection_functions/SBI-1_20090915_234016_KNN_9.npy"
 start_time = 0
 dt = 0.05
 
-eval_detection_func(path_ref, path_est, start_time, dt, duration=3600)
+eval_detection_func(path_ref, path_est, start_time, dt, duration=None)

@@ -34,11 +34,15 @@ def extract_samples(filename, outdir, annotation_path, t_start=0.0, duration=Non
     i_start = np.searchsorted(ref_onsets, t_start)
     if duration is not None:
         i_end = np.searchsorted(ref_offsets, t_end)
-
-    ref_onsets = ref_onsets[i_start:i_end]
-    ref_offsets = ref_offsets[i_start:i_end]
+        ref_onsets = ref_onsets[i_start:i_end]
+        ref_offsets = ref_offsets[i_start:i_end]
+    else:
+        ref_onsets = ref_onsets[i_start:]
+        ref_offsets = ref_offsets[i_start:]
 
     n_samples = np.size(ref_onsets)
+
+    print "{} samples found".format(n_samples)
 
     # Iterate through ref_onsets and extract audio for each
     for i in xrange(n_samples):
@@ -71,6 +75,6 @@ def extract_samples(filename, outdir, annotation_path, t_start=0.0, duration=Non
 filename = '../../audio/ALFRED_20110924_183200.wav'
 outdir = '../../audio/samples/ALFRED'
 annotation_path = '../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt'
-t_start = 0.0
-duration = 1000
+t_start = 30000.0
+duration = 96000
 extract_samples(filename, outdir, annotation_path, t_start, duration)
