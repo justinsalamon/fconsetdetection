@@ -2,27 +2,48 @@ import numpy as np
 import librosa
 import os
 import sklearn.neighbors as nbrs
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 import scipy.signal as sg
+import time
 
 
-def compute_features(y, sr):
+def compute_features_mfcc(y, sr):
     """
     Given a short sample of audio, output the features we are training for
     :param y: 1xN array
         audio data
     :param sr: int
         sampling rate
-    :return: feature vector
+    :return: mfccs
     """
-    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=20, n_fft=2048, hop_length=220,
+    # Compute MFCCs...
+    hop_length = 256
+    mfccs = librosa.feature.mfcc(y, sr, n_mfcc=20, n_fft=1024, hop_length=hop_length,
                                  n_mels=40, fmin=2000)
+    # ...and drop first row
+    mfccs = mfccs[1:, :]
 
-    mfccs = mfccs[1:,:]
+    sr_mfccs = sr*1.0/hop_length
+    return mfccs, sr_mfccs
+
+
+def summarize_features_mfcc(mfccs, v=False):
+    """
+    Given mfcc matrix, return summary for a window
+    :param mfccs: NxM matrix
+        mfcc matrix
+    :param i_start: int
+        index for beginning of window
+    :param i_end: int
+        index for end of window
+    :return: 1xL array
+        feature vector
+    """
 
     # Summarize features
-    # print np.shape(mfccs)
-    features = np.mean(mfccs, axis=1)
+    features = np.max(mfccs, axis=1)
+    features = np.append(features, np.mean(mfccs, axis=1))
     features = np.append(features, np.std(mfccs, axis=1))
     d_mfccs = np.diff(mfccs, axis=1)
     features = np.append(features, np.mean(d_mfccs, axis=1))
@@ -36,7 +57,7 @@ def compute_features(y, sr):
     return np.reshape(features, (1, len(features)))
 
 
-def train_clf(clf, sample_dirs):
+def train_clf(clfs, sample_dirs, sr):
     """
     Trains a classifier on all contents of a given directory. Labels are given
         in the name of the file
@@ -54,8 +75,9 @@ def train_clf(clf, sample_dirs):
         for f in os.listdir(sample_dir):
             if f[-4:] != '.wav':
                 continue
-            y, sr = librosa.load(sample_dir + f, sr=None)
-            features = compute_features(y, sr)
+            y, _ = librosa.load(sample_dir + f, sr=sr)
+
+            features = summarize_features_mfcc(compute_features_mfcc(y, sr)[0])
 
             # THERE EXISTS A BETTER WAY OF HANDLING THIS WHOLE THING
             if data is None:
@@ -78,12 +100,13 @@ def train_clf(clf, sample_dirs):
                 exit()
 
     # print labels
-    # print np.shape(data)
+    print np.shape(data)
 
     # Fit classifier
-    clf.fit(data, labels)
+    for clf in clfs:
+        clf.fit(data, labels)
 
-    return clf
+    return clfs
 
 
 def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05, append_to=None, t_start=0):
@@ -113,18 +136,100 @@ def predict_clf(clf, y, sr, win_size=0.15, hop_size=0.05, append_to=None, t_star
     else:
         novelty_curve = np.load(append_to)
 
+    print '\tcomputing mfcc features... ' + str(time.clock())
+    mfccs = compute_features_mfcc(y, sr)
+
+    print '\tdoing running summary... ' + str(time.clock())
     i = 0
+    ii = 0
     i_offset = t_start * sr
-    while i+win_samples < len(y):
-        segment = y[i:i+hop_samples]
-        features = compute_features(segment, sr)
+    while True:     # :(
+        seg = mfccs[:, i:i+win_samples]
+        if seg.shape[1] < win_samples:
+            break
+        features = summarize_features_mfcc(seg, v=True)
         label = clf.predict_proba(features)[0][1]
         novelty_curve = np.append(novelty_curve, label)
         i += hop_samples
+        ii += 1
+        if ii % 1000 == 0:
+            print 'woo'
 
     # print (novelty_curve[0:50])
 
     return novelty_curve, hop_size
+
+def predict_clfs(clfs, filename, outfiles, sr, win_size=0.15, hop_size=0.05, t_start=0):
+    """
+    "Onset detection function." Outputs a running classification of 150ms
+    windows.
+    :param clf: sklearn classifier
+    :param filename:
+        location of audio file
+    :param win_size: float
+        window size in seconds
+    :param hop_size: float
+        hop size in seconds
+    :param append_to: String
+        filepath to an existing incomplete detection function
+    :return: (1xL, float)
+        novelty curve, time between samples on novelty curve in seconds
+    """
+
+    y, _ = librosa.load(filename, duration=1.0, sr=sr) # Just doing this to get sample rate
+
+    win_samples = np.floor(win_size*sr)   # number of samples in window
+    hop_samples = np.floor(hop_size*sr)   # number of samples in hop
+
+    num_hops_per_block = 100000
+
+    novelty_curves = []
+    for i in xrange(len(clfs)):
+        novelty_curves.append(np.asarray([]))
+
+    i = 0
+    # Iterate through signal by large blocks (constrained by RAM)
+    done = False
+    duration = num_hops_per_block*hop_size+win_size
+    while not done:
+        print "Predicting next block..." + str(time.clock())
+        offset = i*hop_size*num_hops_per_block
+        y, _ = librosa.load(filename, offset=offset, duration=duration, sr=sr)
+        if len(y) < duration:
+            print "last one!"
+            # BAD!!! Throwing out last bit of data
+            break
+            done = True
+        # seg = y[i:i*num_hops_per_block+win_samples]
+        mfccs, sr_mfccs = compute_features_mfcc(y, sr)
+        # Iterate through block of MFCC by hop
+        h = 0
+        while True:     # :(
+            seg = mfccs[:, h:h+win_size*sr_mfccs]
+            if seg.shape[1] < win_size*sr_mfccs:
+                break
+            features = summarize_features_mfcc(seg, v=True)
+            # Predict value for each classifier
+            for j in xrange(len(clfs)):
+                clf = clfs[j]
+                label = clf.predict(features)
+                novelty_curves[j] = np.append(novelty_curves[j], label)
+            h += hop_samples
+        i += 1
+
+    print "Done predicting. Outputting..." + str(time.clock())
+    for i in xrange(len(clfs)):
+        novelty_curve = novelty_curves[i]
+        outfile = outfiles[i]
+
+        # Smooth so taking median later doesn't kill everything
+        streaming_prob = sg.convolve(novelty_curve, [0.1, 0.8, 0.1])
+        # Conform data to CLO format
+        inv_streaming_prob = np.ones_like(streaming_prob)-streaming_prob
+        out = np.column_stack((streaming_prob, inv_streaming_prob))
+
+        print "Rad. Saving output to {}".format(outfile) + str(time.clock())
+        np.save(outfile, out)
 
 
 def half_rectify(n):
@@ -133,33 +238,48 @@ def half_rectify(n):
 if __name__ == "__main__":
     sample_dirs = ["../../audio/samples/ALFRED/", "../../audio/samples/DANBY/"]
     infile = "../../audio/SBI-1_20090915_234016.wav"
-    outfile = "../../detection_functions/SBI-1_20090915_234016_KNN_9.npy"
+    outfiles = ["../../detection_functions/SBI-1_20090915_234016_KNN_11.npy",
+                "../../detection_functions/SBI-1_20090915_234016_SVM_11.npy",
+                "../../detection_functions/SBI-1_20090915_234016_forest_11.npy"]
+    sr = 24000
 
-    clf_type = 'KNN'
+    # clf_type = 'KNN'
 
-    # Train classifier
-    print "Training {} classifier...".format(clf_type)
-    if clf_type == 'KNN':
-        clf = nbrs.KNeighborsClassifier(n_neighbors=5)
-    elif clf_type == 'SVM':
-        clf = SVC(probability=True)
-    else:
-        print "Error: unknown classifier type"
-        exit()
-    clf = train_clf(clf, sample_dirs)
+    # Train classifiers
+    clf_KNN = nbrs.KNeighborsClassifier(n_neighbors=5)
+    clf_SVM = SVC()
+    clf_forest = RandomForestClassifier()
+
+    clfs = [clf_KNN, clf_SVM, clf_forest]
+
+    # Train all classifiers at once
+    print "Training classifiers... " + str(time.clock())
+    train_clf(clfs, sample_dirs, sr=sr)
+
+    # for clf in clfs:
+    #     print "Training next classifier... " + str(time.clock())
+    #     clf = train_clf(clf, sample_dirs)
 
     # Run classifier on 150ms windows of data
-    print "Loading audio..."
-    y, sr = librosa.load(infile, sr=None)
-    print "Predicting novelty curve..."
-    onsets, dt = predict_clf(clf, y, sr)
+    print "Loading audio..." + str(time.clock())
+    # y, sr = librosa.load(infile, sr=None)
 
-    # Smooth so taking median later doesn't kill everything
-    streaming_prob = sg.convolve(onsets, [0.1, 0.8, 0.1])
-    # Conform data to CLO format
-    inv_streaming_prob = np.ones_like(streaming_prob)-streaming_prob
-    out = np.column_stack((streaming_prob, inv_streaming_prob))
+    print "Predicting..." + str(time.clock())
+    predict_clfs(clfs, infile, outfiles, sr=sr)
 
-    np.save(outfile, out)
-    print dt
-
+    # for i in range(len(clfs)):
+    #     clf = clfs[i]
+    #     outfile = outfiles[i]
+    #     print "Predicting next novelty curve..." + str(time.clock())
+    #     onsets, dt = predict_clf(clf, y, sr)
+    #
+    #     # Smooth so taking median later doesn't kill everything
+    #     streaming_prob = sg.convolve(onsets, [0.1, 0.8, 0.1])
+    #     # Conform data to CLO format
+    #     inv_streaming_prob = np.ones_like(streaming_prob)-streaming_prob
+    #     out = np.column_stack((streaming_prob, inv_streaming_prob))
+    #
+    #     print "Rad. Saving output to {}".format(outfile) + str(time.clock())
+    #     np.save(outfile, out)
+    #     print dt
+    #
