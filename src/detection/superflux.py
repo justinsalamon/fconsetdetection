@@ -838,18 +838,18 @@ def main(args):
     import glob
     import fnmatch
     # determine the files to process
-    files = []
-    for f in args.files:
-        # check what we have (file/path)
-        if os.path.isdir(f):
-            # use all files in the given path
-            files = glob.glob(f + '/*.wav')
-        else:
-            # file was given, append to list
-            files.append(f)
-    # only process .wav files
-    files = fnmatch.filter(files, '*.wav')
-    files.sort()
+    files = ['../../audio/SBI-1_20090915_234016.wav']
+    # for f in args.files:
+    #     # check what we have (file/path)
+    #     if os.path.isdir(f):
+    #         # use all files in the given path
+    #         files = glob.glob(f + '/*.wav')
+    #     else:
+    #         # file was given, append to list
+    #         files.append(f)
+    # # only process .wav files
+    # files = fnmatch.filter(files, '*.wav')
+    # files.sort()
     # init filterbank
     filt = None
     filterbank = None
@@ -897,7 +897,7 @@ def main(args):
             else:
                 act = sodf.superflux()
             print type(act)
-            np.save(f + '_superflux.npy', act)
+            np.save(f[12:-4] + '_superflux_13.npy', act)
             # create an Onset object with the activations
         #     o = Onset(act, args.fps, args.online)
         #     if args.save:
