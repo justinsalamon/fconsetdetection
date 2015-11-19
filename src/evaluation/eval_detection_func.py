@@ -136,6 +136,7 @@ def pick_peaks(detection_function, threshold):
     locs = np.where(peaks == True)[0] + 1
     return locs
 
+
 def pick_peaks_at(detection_function, a_threshold):
     """
     Given the output of a detection function and an adaptive threshold, finds
@@ -223,9 +224,27 @@ def indices_to_times(indices, start_time, dt):
 # path_ref = "../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt"
 # path_est = "../../detection_functions/ALFRED_20110924_183200_0-3600_SVM_8.npy"
 
-path_ref = "../../annotations/SBI-1_20090915_HAND_LOW_IDaek_EDITED_with_HIGH.txt"
-path_est = "../../detection_functions/SBI-1_20090915_234016_KNN_12.npy"
-start_time = 0
-dt = 0.05       # Time between every prediction
+# path_ref = "../../annotations/SBI-1_20090915_HAND_LOW_IDaek_EDITED_with_HIGH.txt"
+# path_est = "../../detection_functions/SBI-1_20090915_234016_KNN_12.npy"
+# start_time = 0
+# dt = 0.05       # Time between every prediction
+#
+# eval_detection_func(path_ref, path_est, start_time, dt, duration=None)
 
-eval_detection_func(path_ref, path_est, start_time, dt, duration=None)
+
+######## Following code for operating with Cornell data
+path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
+path_ests = ["amre_corr_conf.npy", "chsp_corr_conf.npy", "oven_corr_conf.npy", "savs_corr_conf.npy",
+             "sosp_corr_conf.npy", "veer_corr_conf.npy", "woth_corr_conf.npy", "wtsp_corr_conf.npy"]
+path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+dts = [0.0050793650679580062, 0.00507936509305, 0.0050793650634, 0.00507936503602,
+       0.0101587300218, 0.0116099772364, 0.0101587302454, 0.00544217690008]
+start_times = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+i = 5
+
+path_est = path_ests[i]
+dt = dts[i]
+start_time = start_times[i]
+eval_detection_func(path_ref, path_prefix+path_est, start_time, dt, duration=None)
+
