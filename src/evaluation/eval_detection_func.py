@@ -2,6 +2,7 @@ import numpy as np
 import mir_eval
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.metrics import precision_recall_curve
 
 import scipy.signal as sg
 
@@ -76,6 +77,12 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     ref_onsets = ref_onsets[ref_onsets >= start_time]
     ref_onsets = ref_onsets[ref_onsets < t_end]
 
+    ref_offsets = np.asarray(df['offsets'])
+    ref_offsets = ref_offsets[ref_offsets >= start_time]
+    ref_offsets = ref_offsets[ref_offsets < t_end]
+
+    assert len(ref_onsets) == len(ref_offsets)
+
     # Get list of precisions and recalls for varying thresholds
     out = []
     precisions = []
@@ -96,29 +103,62 @@ def eval_detection_func(annotation_path, function_path, start_time, dt,
     b, a = sg.butter(1, 6*dt)   # multiplying by dt = dividing by fs
     detection_function_smoothed = sg.filtfilt(b, a, detection_function)
     detection_function_med = sg.medfilt(detection_function_smoothed, win_size)
+    peak_mask = make_peak_mask(detection_function_med, 0)
 
+    y_pred = peak_mask*detection_function_med
+    # Generate corresponding binary thing
+    y_true = np.zeros(y_pred.shape)
+
+    for on, off in zip(ref_onsets, ref_offsets):
+        # make list of all time points between on and off
+        # on_i = int(np.round(on/dt))
+        # off_i = int(np.round(off/dt))
+        # y_true[on_i:off_i+1] = 1
+
+        center = on
+        start = int(np.round((center-0.100)/dt))
+        finish = int(np.round((center+0.100)/dt))
+        y_true[start:finish+1] = 1
+
+    y_true *= peak_mask
+
+    indices = y_pred > 0
+    y_pred = y_pred[indices]
+    y_true = y_true[indices]
+
+    P, R, T = precision_recall_curve(y_true, y_pred)
+    T = np.append(T, 0)
     eps = 0.000000001
+    F = 2*P*R/(P+R+eps)
+    F2 = 5*P*R/(4*P+R+eps)
 
-    for threshold in np.linspace(0, 1, 100):
-        # est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
-        a_threshold = threshold + detection_function_med
-        est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
-        # est_onsets_ind = pick_peaks(detection_function, threshold)
-        est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
-        F, P, R = mir_eval.onset.f_measure(ref_onsets,
-                                           est_onsets,
-                                           window=0.2)
-        F2 = 5*P*R/(4*P+R+eps)
-        out.append((threshold, (F, P, R)))
-        precisions.append(P)
-        recalls.append(R)
-        max_F = max(max_F, F)
-        max_F2 = max(max_F2, F2)
+    print max(F)
+    print max(F2)
 
-    print max_F
-    print max_F2
+    #
+    # for threshold in np.linspace(0, 0.025, 100):
+    #     # est_onsets_ind = pick_peaks_with_smoothing(detection_function, threshold, win_size)
+    #     a_threshold = threshold + detection_function_med
+    #     est_onsets_ind = pick_peaks_at(detection_function, a_threshold)
+    #     # est_onsets_ind = pick_peaks(detection_function, threshold)
+    #     est_onsets = indices_to_times(est_onsets_ind, start_time, dt)
+    #     F, P, R = mir_eval.onset.f_measure(ref_onsets,
+    #                                        est_onsets,
+    #                                        window=0.2)
+    #     F2 = 5*P*R/(4*P+R+eps)
+    #     out.append((threshold, (F, P, R)))
+    #     precisions.append(P)
+    #     recalls.append(R)
+    #     max_F = max(max_F, F)
+    #     max_F2 = max(max_F2, F2)
+    #
+    # print max_F
+    # print max_F2
 
-    plot_pr_curve(recalls, precisions)
+    pr = np.column_stack((P, R, T, F, F2))
+    np.savetxt('../../results/' + function_path[26:-4] + '_new_way.txt', pr)
+
+    plot_pr_curve(R, P)
 
 
 def pick_peaks(detection_function, threshold):
@@ -135,6 +175,22 @@ def pick_peaks(detection_function, threshold):
     peaks = smaller*larger*over_threshold
     locs = np.where(peaks == True)[0] + 1
     return locs
+
+def make_peak_mask(detection_function, threshold):
+    """
+    Given the output of a detection function, finds the indices of the peaks
+    :param detection_function: numpy array
+    :param threshold: float
+    :return: detection function where all indices except for peaks are 0
+    """
+
+    smaller = detection_function[0:-2] <= detection_function[1:-1]
+    larger = detection_function[1:-1] > detection_function[2:]
+    over_threshold = detection_function[1:-1] >= threshold
+    peaks = smaller*larger*over_threshold
+    mask = np.ones(detection_function.shape)
+    mask[1:-1] *= peaks
+    return mask
 
 
 def pick_peaks_at(detection_function, a_threshold):
@@ -232,12 +288,17 @@ def indices_to_times(indices, start_time, dt):
 # path_est = "../../detection_functions/NSDNS_toy3.npy"
 # dt = 0.05       # Time between every prediction
 
-# eval_detection_func(path_ref, path_est, start_time, dt, duration=None)
+path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+path_est = "../../detection_functions/NSDNS_20110902_192900_SF_14_filt.npy"
+dt = 128.0/2400      # Time between every prediction
+start_time = 0
+
+eval_detection_func(path_ref, path_est, start_time, dt, duration=None)
 
 
 ####### Following code for operating with Cornell data
-path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
-path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
+# path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+# path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
 
 # path_ests = ["amre_corr_conf.npy", "chsp_corr_conf.npy", "oven_corr_conf.npy", "savs_corr_conf.npy",
 #              "sosp_corr_conf.npy", "veer_corr_conf.npy", "woth_corr_conf.npy", "wtsp_corr_conf.npy"]
@@ -248,17 +309,17 @@ path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
 #              "sosp_corr_conf_filt.npy", "veer_corr_conf_filt.npy", "woth_corr_conf_filt.npy", "wtsp_corr_conf_filt.npy"]
 # dts = [0.050793650679580062, 0.0507936509305, 0.050793650634, 0.0507936503602,
 #        0.507936501090, 0.0116099772364*5, 0.0101587302454*5, 0.0544217690008]
-
-path_ests = ["nsdns_resampled_all_max.npy"]
-dts = [0.05]
+#
+# path_ests = ["nsdns_resampled_all_max.npy"]
+# dts = [0.05]
 # dts = [0.050793650679580062]
 #
-start_times = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# start_times = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-i = 0
-
-path_est = path_ests[i]
-dt = dts[i]
-start_time = start_times[i]
-eval_detection_func(path_ref, path_prefix+path_est, start_time, dt, duration=None)
+# i = 0
+#
+# path_est = path_ests[i]
+# dt = dts[i]
+# start_time = start_times[i]
+# eval_detection_func(path_ref, path_prefix+path_est, start_time, dt, duration=None)
 
