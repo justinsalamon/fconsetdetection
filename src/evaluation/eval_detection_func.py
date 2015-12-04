@@ -227,21 +227,35 @@ def indices_to_times(indices, start_time, dt):
 # path_ref = "../../annotations/SBI-1_20090915_HAND_LOW_IDaek_EDITED_with_HIGH.txt"
 # path_est = "../../detection_functions/SBI-1_20090915_234016_KNN_12.npy"
 # start_time = 0
+
+# path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+# path_est = "../../detection_functions/NSDNS_toy3.npy"
 # dt = 0.05       # Time between every prediction
-#
+
 # eval_detection_func(path_ref, path_est, start_time, dt, duration=None)
 
 
-######## Following code for operating with Cornell data
-path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
-path_ests = ["amre_corr_conf.npy", "chsp_corr_conf.npy", "oven_corr_conf.npy", "savs_corr_conf.npy",
-             "sosp_corr_conf.npy", "veer_corr_conf.npy", "woth_corr_conf.npy", "wtsp_corr_conf.npy"]
+####### Following code for operating with Cornell data
 path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
-dts = [0.0050793650679580062, 0.00507936509305, 0.0050793650634, 0.00507936503602,
-       0.0101587300218, 0.0116099772364, 0.0101587302454, 0.00544217690008]
+path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
+
+# path_ests = ["amre_corr_conf.npy", "chsp_corr_conf.npy", "oven_corr_conf.npy", "savs_corr_conf.npy",
+#              "sosp_corr_conf.npy", "veer_corr_conf.npy", "woth_corr_conf.npy", "wtsp_corr_conf.npy"]
+# dts = [0.050793650679580062, 0.00507936509305, 0.0050793650634, 0.00507936503602,
+#        0.0101587300218, 0.0116099772364, 0.0101587302454, 0.00544217690008]
+
+# path_ests = ["amre_corr_conf_filt.npy", "chsp_corr_conf_filt.npy", "oven_corr_conf_filt.npy", "savs_corr_conf_filt.npy",
+#              "sosp_corr_conf_filt.npy", "veer_corr_conf_filt.npy", "woth_corr_conf_filt.npy", "wtsp_corr_conf_filt.npy"]
+# dts = [0.050793650679580062, 0.0507936509305, 0.050793650634, 0.0507936503602,
+#        0.507936501090, 0.0116099772364*5, 0.0101587302454*5, 0.0544217690008]
+
+path_ests = ["nsdns_resampled_all_max.npy"]
+dts = [0.05]
+# dts = [0.050793650679580062]
+#
 start_times = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-i = 5
+i = 0
 
 path_est = path_ests[i]
 dt = dts[i]

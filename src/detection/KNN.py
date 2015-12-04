@@ -181,7 +181,7 @@ def predict_clfs(clfs, filename, outfiles, sr, win_size=0.15, hop_size=0.05, t_s
     # win_samples = np.floor(win_size*sr)   # number of samples in window
     # hop_samples = np.floor(hop_size*sr)   # number of samples in hop
 
-    num_hops_per_block = 100000
+    num_hops_per_block = 10000
 
     novelty_curves = []
     for i in xrange(len(clfs)):
@@ -243,9 +243,9 @@ def half_rectify(n):
 if __name__ == "__main__":
     sample_dirs = ["../../audio/samples/ALFRED/", "../../audio/samples/DANBY/"]
     infile = "../../audio/SBI-1_20090915_234016.wav"
-    outfiles = ["../../detection_functions/SBI-1_20090915_234016_KNN_12.npy",
-                "../../detection_functions/SBI-1_20090915_234016_SVM_12.npy",
-                "../../detection_functions/SBI-1_20090915_234016_forest_12.npy"]
+    outfiles = ["../../detection_functions/SBI-1_20090915_234016_KNN_13.npy",
+                "../../detection_functions/SBI-1_20090915_234016_SVM_13.npy",
+                "../../detection_functions/SBI-1_20090915_234016_forest_13.npy"]
     features = None
     # features = ["../../features/SBI-1_20090915_234016_MFCC_20_1024_256_40_2000.npy"]
     sr = 24000
