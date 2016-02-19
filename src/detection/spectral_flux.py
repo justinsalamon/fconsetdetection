@@ -16,8 +16,8 @@ def half_rectify(n):
     return np.fmax(n, np.zeros_like(n))
 
 if __name__ == "__main__":
-    filename = "../../audio/NSDNS_20110902_192900.wav"
-    outfile = "../../detection_functions/NSDNS_20110902_192900_SF_14.npy"
+    filename = "../../audio/SBI-1_20090915_234016.wav"
+    outfile = "../../detection_functions/SBI-1_20090915_234016_SF_36.npy"
 
     # Load audio and compute spectrogram
     sr = 24000
