@@ -21,7 +21,7 @@ def extract_samples(filename, outdir, annotation_path, t_start=0.0, duration=Non
 
     # Get duration of audio
     y, sr = librosa.load(filename, sr=None, offset=t_start, duration=duration)
-    sample_len = np.floor(0.075 * sr)   # +/- 75ms
+    sample_len = 4096   # samples. ~172 ms
     if duration is not None:
         t_end = t_start + duration
 
@@ -46,7 +46,8 @@ def extract_samples(filename, outdir, annotation_path, t_start=0.0, duration=Non
 
     # Iterate through ref_onsets and extract audio for each
     for i in xrange(n_samples):
-        t = (ref_onsets[i] + ref_offsets[i])/2
+        # t = (ref_onsets[i] + ref_offsets[i])/2
+        t = ref_onsets[i]
         idx = np.floor((t-t_start) * sr)
         sample = y[idx-sample_len:idx+sample_len]
         librosa.output.write_wav(outdir+'/true_'+str(int(t*10))+'.wav', sample, sr)
@@ -72,9 +73,10 @@ def extract_samples(filename, outdir, annotation_path, t_start=0.0, duration=Non
             # Else continue while loop and choose new idx
 
 # Main
-filename = '../../audio/ALFRED_20110924_183200.wav'
-outdir = '../../audio/samples/ALFRED'
-annotation_path = '../../annotations/ALFRED_20110924_183200.HAND_high_442NFCs_IDaek_EDIT_TO_INCLUDE_ALL.txt'
-t_start = 30000.0
-duration = 96000
+filename = '../../audio/DANBY_20090923_192904.wav'
+outdir = '../../audio/samples/onsets/DANBY'
+annotation_path = '../../annotations/DANBY_20090923_192904.HAND_ALL_IDaek.txt'
+t_start = 40000
+duration = 10000
 extract_samples(filename, outdir, annotation_path, t_start, duration)
+# extract_samples(filename, outdir, annotation_path)

@@ -1,10 +1,10 @@
 import librosa
 import numpy as np
 
-# MAYBE THIS FILE IS UNNECESSARY
+# THIS FILE IS UNNECESSARY
 
 
-def make_stft(filepath, n_fft=256, hop_length=None, win_length=None, window=None):
+def make_spec(filepath, n_fft=256, hop_length=None, win_length=None, window=None):
     """
     Creates and saves an STFT from an audio file
     :param filepath: string

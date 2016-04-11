@@ -132,8 +132,8 @@ def eval_detection_func(annotation_path, function_path, start_time, dt, trial_nu
     F = 2*P*R/(P+R+eps)
     F2 = 5*P*R/(4*P+R+eps)
 
-    print max(F)
-    print max(F2)
+    print np.nanmax(F)
+    print np.nanmax(F2)
 
     pr = np.column_stack((P, R, T, F, F2))
     outfile = '../../results/' + function_path[26:-4] + '_' + str(trial_number) + '_new_way.txt'
@@ -282,10 +282,12 @@ def indices_to_times(indices, start_time, dt):
 
 path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
 path_est = "../../detection_functions/NSDNS_20110902_192900_SF_14.npy"
+# path_est = "../../detection_functions/NSDNS_SF_51_ground.npy"
+# path_est = "../../detection_functions/ALFRED_SF_49.npy"
 dt = 128.0/24000      # Time between every prediction
 start_time = 0
 #
-eval_detection_func(path_ref, path_est, start_time, dt, trial_number=670, duration=None)
+eval_detection_func(path_ref, path_est, start_time, dt, trial_number=50, duration=None)
 
 
 ####### Following code for operating with Cornell data
