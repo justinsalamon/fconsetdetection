@@ -34,7 +34,7 @@ def plot_pr_curve(recalls, precisions, save=False, outfile=None):
 
 
 def eval_detection_func(annotation_path, function_path, start_time, dt, trial_number,
-                        duration=3000):
+                        duration=3000, save=True):
     """
     Evaluates a detection function. Given the output of a detection function we
     find the peaks, and compare them to a list of ground-truth annotations.
@@ -134,12 +134,13 @@ def eval_detection_func(annotation_path, function_path, start_time, dt, trial_nu
 
     print np.nanmax(F)
     print np.nanmax(F2)
+    print np.mean(P)
 
     pr = np.column_stack((P, R, T, F, F2))
     outfile = '../../results/' + function_path[26:-4] + '_' + str(trial_number) + '_new_way.txt'
     np.savetxt(outfile, pr)
 
-    plot_pr_curve(R, P, save=True, outfile=outfile)
+    plot_pr_curve(R, P, save=save, outfile=outfile)
 
 
 def pick_peaks(detection_function, threshold):
@@ -280,19 +281,19 @@ def indices_to_times(indices, start_time, dt):
 # path_est = "../../detection_functions/NSDNS_toy3.npy"
 # dt = 0.05       # Time between every prediction
 
-path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
-path_est = "../../detection_functions/NSDNS_20110902_192900_SF_14.npy"
+# path_ref = "../../annotations/NSDNS_20110902_192900_high_and_low.txt"
+# path_est = "../../detection_functions/NSDNS_20110902_192900_SF_14.npy"
 # path_est = "../../detection_functions/NSDNS_SF_51_ground.npy"
 # path_est = "../../detection_functions/ALFRED_SF_49.npy"
-dt = 128.0/24000      # Time between every prediction
-start_time = 0
-#
-eval_detection_func(path_ref, path_est, start_time, dt, trial_number=50, duration=None)
+# dt = 128.0/24000      # Time between every prediction
+# start_time = 0
+
+# eval_detection_func(path_ref, path_est, start_time, dt, trial_number=73, duration=None)
 
 
 ####### Following code for operating with Cornell data
-# path_ref_pre= "../../annotations/"
-# path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
+path_ref_pre= "../../annotations/"
+path_prefix = "../../detection_functions/NFC_correlation_raw_data/"
 
 # path_ests = ["amre_corr_confnorm.npy", "chsp_corr_confnorm.npy", "oven_corr_confnorm.npy", "savs_corr_confnorm.npy",
 #              "sosp_corr_confnorm.npy", "veer_corr_confnorm.npy", "woth_corr_confnorm.npy", "wtsp_corr_confnorm.npy"]
@@ -319,9 +320,9 @@ eval_detection_func(path_ref, path_est, start_time, dt, trial_number=50, duratio
 # dts = [0.05]
 # dts = [0.050793650679580062]
 
-# path_ests = ["nsdns_resample2_all_max.npy"]
-# path_refs = ["NSDNS_20110902_192900_high_and_low.txt"]
-# dts = [0.005079365036]
+path_ests = ["nsdns_resample2_all_max.npy"]
+path_refs = ["NSDNS_20110902_192900_high_and_low.txt"]
+dts = [0.005079365036]
 
 # path_ests = ["random_noise.npy"]
 # path_refs = ["NSDNS_20110902_192900_high_and_low.txt"]
@@ -339,4 +340,10 @@ eval_detection_func(path_ref, path_est, start_time, dt, trial_number=50, duratio
 #     dt = dts[i]
 #     start_time = start_times[i]
 #     eval_detection_func(path_ref_pre+path_refs[i], path_prefix+path_est, start_time, dt, trial_number+i, duration=None)
+
+path_est = path_ests[0]
+path_ref = path_refs[0]
+dt=dts[0]
+start_time=0
+eval_detection_func(path_ref, path_est, start_time, dt, trial_number=73, duration=None)
 
